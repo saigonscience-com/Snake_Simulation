@@ -1,7 +1,6 @@
 import random
 import numpy as np
 
-
 class SnakeGame:
     def __init__(self, grid_size=20):
         self.grid_size = grid_size
@@ -15,6 +14,7 @@ class SnakeGame:
         self.food = self._place_food()
         self.done = False
         self.score = 0
+        self.hp = 100  # Snake starts with 100 HP
         return self._get_state()
 
     def _place_food(self):
@@ -46,11 +46,9 @@ class SnakeGame:
 
         # Check for collisions
         if (
-            new_head in self.snake[1:]
-            or new_head[0] < 0
-            or new_head[1] < 0
-            or new_head[0] >= self.grid_size
-            or new_head[1] >= self.grid_size
+            new_head in self.snake[1:]  # Snake collides with itself
+            or new_head[0] < 0 or new_head[1] < 0  # Snake hits walls
+            or new_head[0] >= self.grid_size or new_head[1] >= self.grid_size
         ):
             self.done = True
             return self._get_state(), -1, self.done  # Reward = -1 (collision)
@@ -60,10 +58,25 @@ class SnakeGame:
             self.snake.append(self.snake[-1])  # Grow the snake
             self.food = self._place_food()
             self.score += 1
+            self.hp = 100  # Reset HP when snake eats food
             return self._get_state(), 1, False  # Reward = 1 (food eaten)
+
+        # If the snake moves without eating the food, lose 1 HP
+        self.hp -= 1
+        if self.hp <= 0:
+            self.done = True
+            return self._get_state(), -1, self.done  # Lose when HP reaches 0
 
         return self._get_state(), 0, False  # No reward, game continues
 
     def _get_state(self):
-        # Return the current game state (snake, food, direction, etc.)
-        return np.array(self.snake + [self.food] + [self.direction])
+        # Flatten the snake positions (x, y) pairs into a single list
+        snake_positions = [coord for segment in self.snake for coord in segment]
+        
+        # Food and direction are already in a simple format, we can append them directly
+        state = snake_positions + list(self.food) + list(self.direction) + [self.hp]
+
+        # Convert the state to a NumPy array
+        return np.array(state)
+
+
